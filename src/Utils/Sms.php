@@ -174,8 +174,6 @@ class Sms extends SubmitSm
             $short_message = $message;
             $doCsms        = false;
         }
-        \var_dump($doCsms,$parts,$csmsReference);exit;
-    
     // Deal with CSMS
         if ($doCsms) {
             if ($this->csmsType == self::CSMS_PAYLOAD) {
@@ -191,7 +189,7 @@ class Sms extends SubmitSm
                 }
                 return $res;
             } else {
-                var_dump('okok');
+                var_dump('okok');exit;
                 $sarMsgRefNum    = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference, 2, 'n');
                 $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts), 1, 'c');
                 $seqnum             = 1;
