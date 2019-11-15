@@ -15,6 +15,9 @@ use alexeevdv\React\Smpp\Pdu\QuerySm;
 use alexeevdv\React\Smpp\Pdu\ReplaceSm;
 use alexeevdv\React\Smpp\Pdu\Unbind;
 use Evenement\EventEmitter;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
 use React\Socket\Server as SocketServer;
@@ -26,11 +29,16 @@ final class Server extends EventEmitter implements ServerInterface
      * @var SocketServer
      */
     private $server;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
-    public function __construct($uri, LoopInterface $loop, array $context = array())
+    public function __construct($uri, LoopInterface $loop, array $context = array(), $logger = null)
     {
-        $server = new SocketServer($uri, $loop, $context);
+        $server       = new SocketServer($uri, $loop, $context);
         $this->server = $server;
+        $this->logger = $logger ?? new Logger('react-smpp', [new StreamHandler('php://stderr')]);
 
         $that = $this;
         $this->server->on('connection', function (ConnectionInterface $conn) use ($loop, $that) {
@@ -46,15 +54,31 @@ final class Server extends EventEmitter implements ServerInterface
                 } catch (\Exception $e) {
                     // TODO GENERIC_NACK
                     $connection->emit('error', [$e]);
+                    $this->logger->error('error', [$e]);
                 }
             });
 
             $connection->on('pdu', function (Pdu $pdu) use ($connection) {
                 if ($pdu instanceof BindReceiver) {
+                    $this->logger->debug('BindReceiver', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'getSystemId'  => $pdu->getSystemId(),
+                        'getPassword'  => $pdu->getPassword(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('bind_receiver', [$pdu]);
                 }
 
                 if ($pdu instanceof BindTransmitter) {
+                    $this->logger->debug('BindTransmitter', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'size (bytes)' => $pdu->getCommandLength(),
+                        'getSystemId'  => $pdu->getSystemId(),
+                        'getPassword'  => $pdu->getPassword(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('bind_transmitter', [$pdu]);
                 }
 
@@ -63,6 +87,11 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof SubmitSm) {
+                    $this->logger->debug('SubmitSm', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('submit_sm', [$pdu]);
                 }
 
@@ -71,6 +100,11 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof Unbind) {
+                    $this->logger->debug('Unbind', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('unbind', [$pdu]);
                 }
 
@@ -83,15 +117,32 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof BindTransceiver) {
+                    $this->logger->debug('BindTransceiver', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'getSystemId'  => $pdu->getSystemId(),
+                        'getPassword'  => $pdu->getPassword(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('bind_transceiver', [$pdu]);
                 }
 
                 if ($pdu instanceof EnquireLink) {
+                    $this->logger->debug('EnquireLink', [
+                        'sequence'     => $pdu->getSequenceNumber(),
+                        'getCommandId' => $pdu->getCommandId(),
+                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                    ]);
                     return $connection->emit('enquire_link', [$pdu]);
                 }
             });
 
             $connection->on('send', function (Pdu $pdu) use ($connection) {
+                $this->logger->debug('send', [
+                    'sequence'     => $pdu->getSequenceNumber(),
+                    'getCommandId' => $pdu->getCommandId(),
+                    'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                ]);
                 $connection->write($pdu->__toString());
             });
 

@@ -1,17 +1,22 @@
 {
     "name": "alexeevdv/react-smpp",
     "description": "Async SMPP server and client implementations for ReactPHP.",
-    "keywords": ["react", "reactphp", "smpp"],
+    "keywords": [
+        "react",
+        "reactphp",
+        "smpp"
+    ],
     "autoload": {
         "psr-4": {
-            "alexeevdv\\React\\Smpp\\" : "src"
+            "alexeevdv\\React\\Smpp\\": "src"
         }
     },
     "require": {
         "php": "^7.1",
         "ext-iconv": "*",
         "react/event-loop": "^1.1",
-        "react/socket": "^1.2"
+        "react/socket": "^1.2",
+        "monolog/monolog": "^2.0"
     },
     "require-dev": {
         "codeception/codeception": "^3.0"
