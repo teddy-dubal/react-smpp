@@ -36,6 +36,12 @@ class DataWrapper
         return $value;
     }
 
+    public function writeInt16(int $value): self
+    {
+        $this->data .= pack('n', $value);
+        return $this;
+    }
+
     public function readInt32(): int
     {
         $value = unpack('N', $this->data, $this->position)[1];
@@ -84,12 +90,14 @@ class DataWrapper
     {
         if ($this->bytesLeft() < 4) {
             // TODO throw exception?
+            throw new Exception("No TLV", 1);
         }
 
-        $tag = $this->readInt16();
+        $tag    = $this->readInt16();
         $length = $this->readInt16();
         if ($this->bytesLeft() < $length) {
             // TODO throw exception?
+            throw new Exception("No TLV", 1);
         }
         $value = $this->readBytes($length);
         return new TLV($tag, $value);
@@ -117,8 +125,8 @@ class DataWrapper
 
     public function readAddress($maxLength = 21): ?AddressContract
     {
-        $ton = $this->readInt8();
-        $npi = $this->readInt8();
+        $ton   = $this->readInt8();
+        $npi   = $this->readInt8();
         $value = $this->readNullTerminatedString($maxLength);
         return strlen($value) ? new Address($ton, $npi, $value) : null;
     }
@@ -130,5 +138,17 @@ class DataWrapper
             ->writeInt8($address ? $address->getNpi() : 0)
             ->writeNullTerminatedString($address ? $address->getValue() : '')
         ;
+    }
+
+    public function writeTLV(?TLV $tlv): self
+    {
+        $this->writeInt16($tlv->getTag())
+            ->writeInt16($tlv->getLength());
+        if ($tlv->getLength() == 2) {
+            $this->writeInt16($tlv->getValue());
+        } else {
+            $this->writeInt8($tlv->getValue());
+        }
+        return $this;
     }
 }

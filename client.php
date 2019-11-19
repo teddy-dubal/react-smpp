@@ -64,12 +64,12 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
                 $message = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
                 $msg = (new Gsm0338())->encode($message);
                 try {
-                    $pduSubmit = new Sms();
-                    $pduSubmit->setSourceAddress(new Address(Address::TON_UNKNOWN, Address::NPI_UNKNOWN, 93134))
+                    $sms = new Sms();
+                    $sms->setSourceAddress(new Address(Address::TON_UNKNOWN, Address::NPI_UNKNOWN, 93134))
                     ->setDestinationAddress(new Address(Address::TON_INTERNATIONAL, Address::NPI_ISDN, 590690766186))
                     ->setShortMessage($msg)
-                    ->setSequenceNumber( $pdu->getSequenceNumber() + 1);
-                    $connection->write($pduSubmit);
+                    ->setSequenceNumber($connection->getNextSequenceNumber())
+                    ->setConnection($connection)->send();
                 } catch (\Throwable $th) {
                     return $connection->emit('error', [$th]);
                 }
@@ -89,7 +89,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
                 $e = new \Exception('failed submitsm');
                 $connection->emit('error', [$e]);
             } else {
-                $connection->write((new Unbind())->setSequenceNumber($pdu->getSequenceNumber() + 1));
+                $connection->write((new Unbind())->setSequenceNumber($connection->getNextSequenceNumber()));
                 $connection->end();
             }
             $logger->debug('', [
@@ -103,7 +103,9 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
             $logger->debug('SubmitSmResp>');
         }
         if ($pdu instanceof UnbindResp) {
+            $logger->debug('<UnbindResp');
             $connection->end();
+            $logger->debug('UnbindResp>');
         }
     });
     $connection->on('error', function ($e) use ($connection, $logger) {
@@ -115,26 +117,5 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
         $logger->debug('ERROR>');
     });
 });
-
-/*
-function submitSm(Address $source, Address $destination, $short_message = null, $seq = 1, $tags = null, $dataCoding = 0, $priority = 0x00, $scheduleDeliveryTime = null, $validityPeriod = null, $esmClass = null)
-{
-    $pduSubmit = new SubmitSm();
-    $pduSubmit->setSourceAddress($source)
-        ->setDestinationAddress($destination)
-        ->setShortMessage($short_message)
-        ->setSequenceNumber($seq);
-    $st = $pduSubmit->__toString();
-    if (!empty($tags)) {
-        foreach ($tags as $tag) {
-            $st .= $tag->getBinary();
-        }
-    }
-    echo chunk_split(bin2hex($st), 2, " ");
-    exit;
-    return $st;
-
-}
-*/
 
 $loop->run();

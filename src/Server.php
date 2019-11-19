@@ -49,18 +49,19 @@ final class Server extends EventEmitter implements ServerInterface
             $connection->on('data', function ($data) use ($connection) {
                 $pduFactory = new Factory;
                 try {
+                    echo(chunk_split(bin2hex($data), 2, " ")).PHP_EOL;
                     $pdu = $pduFactory->createFromBuffer($data);
                     $connection->emit('pdu', [$pdu]);
                 } catch (\Exception $e) {
                     // TODO GENERIC_NACK
                     $connection->emit('error', [$e]);
-                    $this->logger->error('error', [$e]);
+                    $this->logger->error('error', ['message'=>chunk_split($e->getMessage(), 2, " ")]);
                 }
             });
 
             $connection->on('pdu', function (Pdu $pdu) use ($connection) {
                 if ($pdu instanceof BindReceiver) {
-                    $this->logger->debug('BindReceiver', [
+                    $this->logger->debug('< BindReceiver', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'getSystemId'  => $pdu->getSystemId(),
                         'getPassword'  => $pdu->getPassword(),
@@ -71,7 +72,7 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof BindTransmitter) {
-                    $this->logger->debug('BindTransmitter', [
+                    $this->logger->debug('< BindTransmitter', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'size (bytes)' => $pdu->getCommandLength(),
                         'getSystemId'  => $pdu->getSystemId(),
@@ -87,7 +88,7 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof SubmitSm) {
-                    $this->logger->debug('SubmitSm', [
+                    $this->logger->debug('< SubmitSm', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'getCommandId' => $pdu->getCommandId(),
                         'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
@@ -100,7 +101,7 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof Unbind) {
-                    $this->logger->debug('Unbind', [
+                    $this->logger->debug('< Unbind', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'getCommandId' => $pdu->getCommandId(),
                         'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
@@ -117,7 +118,7 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof BindTransceiver) {
-                    $this->logger->debug('BindTransceiver', [
+                    $this->logger->debug('< BindTransceiver', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'getSystemId'  => $pdu->getSystemId(),
                         'getPassword'  => $pdu->getPassword(),
@@ -128,7 +129,7 @@ final class Server extends EventEmitter implements ServerInterface
                 }
 
                 if ($pdu instanceof EnquireLink) {
-                    $this->logger->debug('EnquireLink', [
+                    $this->logger->debug('< EnquireLink', [
                         'sequence'     => $pdu->getSequenceNumber(),
                         'getCommandId' => $pdu->getCommandId(),
                         'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
@@ -138,7 +139,7 @@ final class Server extends EventEmitter implements ServerInterface
             });
 
             $connection->on('send', function (Pdu $pdu) use ($connection) {
-                $this->logger->debug('send', [
+                $this->logger->debug('Send >', [
                     'sequence'     => $pdu->getSequenceNumber(),
                     'getCommandId' => $pdu->getCommandId(),
                     'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),

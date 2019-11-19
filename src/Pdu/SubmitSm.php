@@ -2,11 +2,12 @@
 
 namespace alexeevdv\React\Smpp\Pdu;
 
-use alexeevdv\React\Smpp\Proto\Contract\Address as AddressContract;
-use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
+use DateTimeInterface;
+use alexeevdv\React\Smpp\Pdu\TLV;
 use alexeevdv\React\Smpp\Proto\DateTime;
 use alexeevdv\React\Smpp\Utils\DataWrapper;
-use DateTimeInterface;
+use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
+use alexeevdv\React\Smpp\Proto\Contract\Address as AddressContract;
 
 class SubmitSm extends Pdu implements Contract\SubmitSm
 {
@@ -74,6 +75,10 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
      * @var int
      */
     private $smDefaultMsgId = 0;
+    /**
+     * @var array
+     */
+    private $tlv = [];
 
     public function __construct($body = '')
     {
@@ -126,7 +131,13 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
         $this->setShortMessage(
             $wrapper->readBytes($smLength)
         );
-
+        try {
+            while ($tlv = $wrapper->readTLV()) {
+                $this->addTLV($tlv);
+            }
+        } catch (\Throwable $th) {
+        }
+        
         /* Body layout
         optional
 
@@ -311,6 +322,22 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
         return $this;
     }
 
+    public function addTLV(TLV $tlv)
+    {
+        $this->tlv[] = $tlv;
+        return $this;
+    }
+
+    public function setTLV(array $tlv)
+    {
+        $this->tlv = $tlv;
+        return $this;
+    }
+
+    public function getTLV():array
+    {
+        return $this->tlv;
+    }
     public function __toString(): string
     {
         $wrapper = new DataWrapper('');
@@ -347,7 +374,9 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
         )->writeBytes(
             $this->getShortMessage()
         );
-
+        foreach ($this->getTLV() as $tlv) {
+            $wrapper->writeTLV($tlv);
+        }
         $this->setBody($wrapper->__toString());
 
         return parent::__toString();

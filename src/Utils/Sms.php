@@ -4,6 +4,7 @@ namespace alexeevdv\React\Smpp\Utils;
 use alexeevdv\React\Smpp\Pdu\TLV;
 use alexeevdv\React\Smpp\Pdu\SubmitSm;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
+use React\Socket\ConnectionInterface;
 
 class Sms extends SubmitSm
 {
@@ -38,10 +39,11 @@ class Sms extends SubmitSm
      */
     private $sarMsgRefNum;
     /**
+     * 
      *
-     * @var array
+     * @var ConnectionInterface
      */
-    private $tlv = [];
+    private $connection;
 
     public function __construct($body = '')
     {
@@ -59,22 +61,17 @@ class Sms extends SubmitSm
         return $this->csmsType;
     }
 
-    public function addTLV(TLV $tlv)
+    public function setConnection(ConnectionInterface $connection)
     {
-        $this->tlv[] = $tlv;
+        $this->connection = $connection;
         return $this;
     }
 
-    public function setTLV(TLV $tlv)
+    public function getConnection()
     {
-        $this->tlv = $tlv;
-        return $this;
+        return $this->connection;
     }
 
-    public function getTLV()
-    {
-        return $this->tlv;
-    }
     /**
      * 
      *
@@ -129,26 +126,26 @@ class Sms extends SubmitSm
     public function getCsmsReference()
     {
         $limit = ($this->csmsType == self::CSMS_8BIT_UDH) ? 255 : 65535;
-        // if (!isset($sarMsgRefNum)) {
-        $sarMsgRefNum = mt_rand(0, $limit);
-        // }
-
-        $sarMsgRefNum++;
-        if ($sarMsgRefNum > $limit) {
-            $sarMsgRefNum = 0;
+        if (!isset($this->sarMsgRefNum)) {
+            $this->sarMsgRefNum = mt_rand(0, $limit);
         }
 
-        return $sarMsgRefNum;
+        $this->sarMsgRefNum++;
+        if ($this->sarMsgRefNum > $limit) {
+            $this->sarMsgRefNum = 0;
+        }
+
+        return $this->sarMsgRefNum;
     }
 
-    public function parse(){
+    private function parse(){
         $message = $this->getShortMessage();
         $dataCoding = $this->getDataCoding();
         $msgLength = strlen($message);
+        
         if ($msgLength > 160 && $dataCoding != DataCoding::UCS2 && $dataCoding != DataCoding::DEFAULT) {
             return false;
         }
-
         switch ($dataCoding) {
             case DataCoding::UCS2:
                 $singleSmsOctetLimit = 140; // in octets, 70 UCS-2 chars
@@ -189,32 +186,34 @@ class Sms extends SubmitSm
                 }
                 return $res;
             } else {
-                var_dump('okok');exit;
-                $sarMsgRefNum    = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference, 2, 'n');
-                $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts), 1, 'c');
+                $csmsReference = 55878;
+                $sarMsgRefNum    = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
+                $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
                 $seqnum             = 1;
                 foreach ($parts as $part) {
-                    $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum, 1, 'c'));
-                    // $res     = submitSm($from, $to, $part, $seqnum, (empty($tags) ? $sartags : array_merge($tags, $sartags)), $dataCoding, $priority, $scheduleDeliveryTime, $validityPeriod);
+                    $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
+                    $res = $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
+                    ->setShortMessage($part)
+                    ->submitSm();
                     $seqnum++;
                 }
                 return $res;
             }
         }
-        return parent::__toString();
+        return $this->submitSm();
     }
 
-    // public function submitSm(){
+    public function submitSm(){
+        $this->connection->write($this->__toString());
+    }
 
-    // }
-
-    /**
-     * Undocumented function
-     *
-     * @return string
-     */
-    public function __toString(): string
+    public function send()
     {
+        
+        if (!$this->connection){
+            throw new Exception("Connection required", 1);
+        }
         return $this->parse();
     }
+   
 }

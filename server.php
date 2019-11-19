@@ -74,7 +74,6 @@ $smppServer->on('connection', function (ConnectionInterface $connection) use ($l
     });
 
     $connection->on('error', function ($error) use ($connection) {
-        echo $error->getMessage();
         $connection->close();
     });
 });
