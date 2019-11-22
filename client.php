@@ -114,7 +114,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
         $logger->debug('<ERROR');
         //On logue les erreurs
         var_dump(hex2bin($e->getMessage()));
-        $pdu = new Unbind();
+        $pdu = (new Unbind())->setSequenceNumber($connection->getNextSequenceNumber());
         $connection->write($pdu);
         $connection->end();
         $logger->debug('ERROR>');
