@@ -32,15 +32,15 @@ $uri               = '127.0.0.1:2775';
 $credentials = ['id'=>'sun','password'=>'$unD1g'];
 $credentials = ['id'=>'test','password'=>'test'];
 
-$connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_connection) use ($logger,$credentials) {
+$connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con) use ($logger,$loop,$credentials) {
     $session = ['id' => \uniqid(), 'auth' => false, 'id_smsc' => null, 'system_id' => null, 'password'];
     $logger->info('SMPP client', $session);
-    $connection = new Connection($_connection);
+    $connection = new Connection($con);
     $pdu        = new BindTransmitter();
     // $pdu            = new BindTransceiver();
     $pdu->setSystemId($credentials['id'])
         ->setPassword($credentials['password'])
-        ->setSequenceNumber(1);
+        ->setSequenceNumber($connection->getNextSequenceNumber());
     $connection->write($pdu);
 
     $connection->on('data', function ($data) use ($connection) {
@@ -52,7 +52,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
             return $connection->emit('error', [$e]);
         }
     });
-    $connection->on('pdu', function (Pdu $pdu) use ($connection, &$session, $logger) {
+    $connection->on('pdu', function (Pdu $pdu) use ($connection,$loop, &$session, $logger) {
         if ($pdu instanceof BindTransmitterResp) {
             $logger->debug('<BindTransmitterResp');
             if (in_array($pdu->getCommandStatus(), [CommandStatus::ESME_RBINDFAIL, CommandStatus::ESME_RUNKNOWNERR])) {
@@ -69,7 +69,9 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
                     ->setDestinationAddress(new Address(Address::TON_INTERNATIONAL, Address::NPI_ISDN, 590690766186))
                     ->setShortMessage($msg)
                     ->setSequenceNumber($connection->getNextSequenceNumber())
-                    ->setConnection($connection)->send();
+                    ->setConnection($connection)
+                    ->setLoop($loop)
+                    ->send();
                 } catch (\Throwable $th) {
                     return $connection->emit('error', [$th]);
                 }
@@ -111,6 +113,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $_con
     $connection->on('error', function ($e) use ($connection, $logger) {
         $logger->debug('<ERROR');
         //On logue les erreurs
+        var_dump(hex2bin($e->getMessage()));
         $pdu = new Unbind();
         $connection->write($pdu);
         $connection->end();

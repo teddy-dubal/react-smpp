@@ -14,6 +14,7 @@ use alexeevdv\React\Smpp\Pdu\Factory;
 use alexeevdv\React\Smpp\Pdu\QuerySm;
 use alexeevdv\React\Smpp\Pdu\ReplaceSm;
 use alexeevdv\React\Smpp\Pdu\Unbind;
+use alexeevdv\React\Smpp\Proto\DataCoding\Gsm0338;
 use Evenement\EventEmitter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -49,13 +50,12 @@ final class Server extends EventEmitter implements ServerInterface
             $connection->on('data', function ($data) use ($connection) {
                 $pduFactory = new Factory;
                 try {
-                    echo(chunk_split(bin2hex($data), 2, " ")).PHP_EOL;
                     $pdu = $pduFactory->createFromBuffer($data);
                     $connection->emit('pdu', [$pdu]);
                 } catch (\Exception $e) {
                     // TODO GENERIC_NACK
                     $connection->emit('error', [$e]);
-                    $this->logger->error('error', ['message'=>chunk_split($e->getMessage(), 2, " ")]);
+                    $this->logger->error('error', ['message' => chunk_split($e->getMessage(), 2, " ")]);
                 }
             });
 
@@ -89,9 +89,16 @@ final class Server extends EventEmitter implements ServerInterface
 
                 if ($pdu instanceof SubmitSm) {
                     $this->logger->debug('< SubmitSm', [
-                        'sequence'     => $pdu->getSequenceNumber(),
-                        'getCommandId' => $pdu->getCommandId(),
-                        'getBody'      => chunk_split(bin2hex($pdu->__toString()), 2, " "),
+                        'sequence'                => $pdu->getSequenceNumber(),
+                        'getCommandId'            => $pdu->getCommandId(),
+                        'getSourceAddress'        => $pdu->getSourceAddress()->getValue(),
+                        'getDestinationAddress'   => $pdu->getDestinationAddress()->getValue(),
+                        'getScheduleDeliveryTime' => $pdu->getScheduleDeliveryTime(),
+                        'getDataCoding'           => $pdu->getDataCoding(),
+                        'getShortMessage'         => (new Gsm0338())->decode($pdu->getShortMessage()),
+                        'getValidityPeriod'       => $pdu->getValidityPeriod(),
+                        'getSmDefaultMsgId'       => $pdu->getSmDefaultMsgId(),
+                        //'getBody'                 => chunk_split(bin2hex($pdu->__toString()), 2, " "),
                     ]);
                     return $connection->emit('submit_sm', [$pdu]);
                 }

@@ -41,6 +41,11 @@ class Sms extends SubmitSm
     /**
      * 
      *
+     */
+    private $loop;
+    /**
+     * 
+     *
      * @var ConnectionInterface
      */
     private $connection;
@@ -70,6 +75,16 @@ class Sms extends SubmitSm
     public function getConnection()
     {
         return $this->connection;
+    }
+    public function setLoop($loop)
+    {
+        $this->loop = $loop;
+        return $this;
+    }
+
+    public function getLoop()
+    {
+        return $this->loop;
     }
 
     /**
@@ -192,12 +207,16 @@ class Sms extends SubmitSm
                 $seqnum             = 1;
                 foreach ($parts as $part) {
                     $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
-                    $res = $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
-                    ->setShortMessage($part)
-                    ->submitSm();
+                    $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
+                    ->setShortMessage($part);
+                    $pduStr = $this->__toString();
+                    $c = $this->connection;
+                    $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
+                        $c->write($pduStr);
+                    });
                     $seqnum++;
                 }
-                return $res;
+                return true;
             }
         }
         return $this->submitSm();
