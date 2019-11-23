@@ -14,8 +14,10 @@ use alexeevdv\React\Smpp\Pdu\SubmitSm;
 use alexeevdv\React\Smpp\Proto\Address;
 use alexeevdv\React\Smpp\Pdu\UnbindResp;
 use alexeevdv\React\Smpp\Pdu\SubmitSmResp;
+use alexeevdv\React\Smpp\Pdu\BindTransceiver;
 use alexeevdv\React\Smpp\Pdu\BindTransmitter;
 use alexeevdv\React\Smpp\Proto\CommandStatus;
+use alexeevdv\React\Smpp\Pdu\BindTransceiverResp;
 use alexeevdv\React\Smpp\Pdu\BindTransmitterResp;
 use alexeevdv\React\Smpp\Proto\DataCoding\Gsm0338;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
@@ -36,8 +38,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
     $session = ['id' => \uniqid(), 'auth' => false, 'id_smsc' => null, 'system_id' => null, 'password'];
     $logger->info('SMPP client', $session);
     $connection = new Connection($con);
-    $pdu        = new BindTransmitter();
-    // $pdu            = new BindTransceiver();
+    $pdu            = new BindTransceiver();
     $pdu->setSystemId($credentials['id'])
         ->setPassword($credentials['password'])
         ->setSequenceNumber($connection->getNextSequenceNumber());
@@ -53,8 +54,8 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
         }
     });
     $connection->on('pdu', function (Pdu $pdu) use ($connection,$loop, &$session, $logger) {
-        if ($pdu instanceof BindTransmitterResp) {
-            $logger->debug('<BindTransmitterResp');
+        if ($pdu instanceof BindTransceiverResp) {
+            $logger->debug('<BindTransceiverResp');
             if (in_array($pdu->getCommandStatus(), [CommandStatus::ESME_RBINDFAIL, CommandStatus::ESME_RUNKNOWNERR])) {
                 $e = new \Exception('failed transmitter');
                 return $connection->emit('error', [$e]);
@@ -62,6 +63,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
             if (CommandStatus::ESME_ROK == $pdu->getCommandStatus()) {
                 $message = 'H€llo world é à ù ' . time();
                 $message = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
+                $message .= 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
                 $msg = (new Gsm0338())->encode($message);
                 try {
                     $sms = new Sms();
@@ -83,7 +85,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
                 ]);
 
             }
-            $logger->debug('BindTransmitterResp>');
+            $logger->debug('BindTransceiverResp>');
         }
         if ($pdu instanceof SubmitSmResp) {
             $logger->debug('<SubmitSmResp');
