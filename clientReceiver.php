@@ -11,13 +11,16 @@ use alexeevdv\React\Smpp\Connection;
 use alexeevdv\React\Smpp\Pdu\Unbind;
 use alexeevdv\React\Smpp\Pdu\Factory;
 use alexeevdv\React\Smpp\Pdu\SubmitSm;
+use alexeevdv\React\Smpp\Pdu\DeliverSm;
 use alexeevdv\React\Smpp\Proto\Address;
 use alexeevdv\React\Smpp\Pdu\UnbindResp;
+use alexeevdv\React\Smpp\Pdu\EnquireLink;
 use alexeevdv\React\Smpp\Pdu\SubmitSmResp;
-use alexeevdv\React\Smpp\Pdu\BindTransceiver;
+use alexeevdv\React\Smpp\Pdu\DeliverSmResp;
 use alexeevdv\React\Smpp\Pdu\BindTransmitter;
+use alexeevdv\React\Smpp\Pdu\EnquireLinkResp;
 use alexeevdv\React\Smpp\Proto\CommandStatus;
-use alexeevdv\React\Smpp\Pdu\BindTransceiverResp;
+use alexeevdv\React\Smpp\Pdu\BindReceiverResp;
 use alexeevdv\React\Smpp\Pdu\BindTransmitterResp;
 use alexeevdv\React\Smpp\Proto\DataCoding\Gsm0338;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
@@ -25,7 +28,7 @@ use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
 require_once 'vendor/autoload.php';
 
 $loop      = React\EventLoop\Factory::create();
-$connector = new React\Socket\Connector($loop, ['timeout' => 20]);
+$connector = new React\Socket\Connector($loop, ['timeout' => 5]);
 $logger    = new Logger('react-smpp-client', [new StreamHandler('php://stderr')]);
 
 $uri               = '127.0.0.1:2775';
@@ -33,10 +36,10 @@ $uri               = '127.0.0.1:2775';
 $credentials = ['id'=>'test','password'=>'test'];
 
 $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con) use ($logger,$loop,$credentials) {
-    $session = ['id' => \uniqid(), 'auth' => false, 'id_smsc' => null, 'system_id' => null, 'password'];
+    $session = ['id' => \uniqid(), 'auth' => false];
     $logger->info('SMPP client', $session);
     $connection = new Connection($con);
-    $pdu            = new BindTransceiver();
+    $pdu        = new BindTransmitter();
     $pdu->setSystemId($credentials['id'])
         ->setPassword($credentials['password'])
         ->setSequenceNumber($connection->getNextSequenceNumber());
@@ -52,57 +55,49 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
         }
     });
     $connection->on('pdu', function (Pdu $pdu) use ($connection,$loop, &$session, $logger) {
-        if ($pdu instanceof BindTransceiverResp) {
-            $logger->debug('<BindTransceiverResp');
+        if ($pdu instanceof BindReceiverResp) {
+            $logger->debug('<BindReceiverResp');
             if (in_array($pdu->getCommandStatus(), [CommandStatus::ESME_RBINDFAIL, CommandStatus::ESME_RUNKNOWNERR])) {
                 $e = new \Exception('failed transmitter');
                 return $connection->emit('error', [$e]);
-            }
-            if (CommandStatus::ESME_ROK == $pdu->getCommandStatus()) {
-                $message = 'H€llo world é à ù ' . time();
-                // $message = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
-                // $message .= 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
-                $msg = (new Gsm0338())->encode($message);
-                try {
-                    $sms = new Sms();
-                    $sms->setSourceAddress(new Address(Address::TON_UNKNOWN, Address::NPI_UNKNOWN, 29409))
-                    ->setDestinationAddress(new Address(Address::TON_INTERNATIONAL, Address::NPI_ISDN, 590690766186))
-                    ->setShortMessage($msg)
-                    ->setSequenceNumber($connection->getNextSequenceNumber())
-                    ->setConnection($connection)
-                    ->setLoop($loop)
-                    ->send();
-                } catch (\Throwable $th) {
-                    return $connection->emit('error', [$th]);
-                }
-                $logger->debug('', [
-                    'sequence'     => $pdu->getSequenceNumber(),
-                    'getCommandId' => $pdu->getCommandId(),
-                    'getBody'      => $pdu->getBody(),
-                    'session'      => $session,
-                ]);
-
-            }
-            $logger->debug('BindTransceiverResp>');
-        }
-        if ($pdu instanceof SubmitSmResp) {
-            $logger->debug('<SubmitSmResp');
-            if (in_array($pdu->getCommandStatus(), [CommandStatus::ESME_RSUBMITFAIL, CommandStatus::ESME_RUNKNOWNERR])) {
-                $e = new \Exception('failed submitsm');
-                $connection->emit('error', [$e]);
-            } else {
-                $connection->write((new Unbind())->setSequenceNumber($connection->getNextSequenceNumber()));
-                $connection->end();
-            }
+            } 
             $logger->debug('', [
                 'sequence'         => $pdu->getSequenceNumber(),
                 'getCommandStatus' => $pdu->getCommandStatus(),
                 'getCommandId'     => $pdu->getCommandId(),
-                'getMessageId'     => $pdu->getMessageId(),
                 'getBody'          => $pdu->getBody(),
                 'session'          => $session,
             ]);
-            $logger->debug('SubmitSmResp>');
+            $logger->debug('BindReceiverResp>');
+        }
+        if ($pdu instanceof DeliverSm) {
+            $logger->debug('<DeliverSm');
+            $pduResp = new DeliverSmResp;
+            $pduResp->setSequenceNumber($pdu->getSequenceNumber())
+                ->setMessageId('wep');
+            $connection->write($pduResp);
+            $logger->debug('', [
+                'sequence'         => $pdu->getSequenceNumber(),
+                'getCommandStatus' => $pdu->getCommandStatus(),
+                'getCommandId'     => $pdu->getCommandId(),
+                'getBody'          => $pdu->getBody(),
+                'session'          => $session,
+            ]);
+            $logger->debug('DeliverSm>');
+            $connection->close();
+        }
+        if ($pdu instanceof EnquireLink) {
+            $logger->debug('<EnquireLink');
+            $pduResp = new EnquireLinkResp;
+            $pduResp->setSequenceNumber($pdu->getSequenceNumber());
+            $connection->write($pduResp);
+            $logger->debug('', [
+                'sequence'         => $pdu->getSequenceNumber(),
+                'getCommandStatus' => $pdu->getCommandStatus(),
+                'getCommandId'     => $pdu->getCommandId(),
+                'session'          => $session,
+            ]);
+            $logger->debug('EnquireLink>');
         }
         if ($pdu instanceof UnbindResp) {
             $logger->debug('<UnbindResp');
