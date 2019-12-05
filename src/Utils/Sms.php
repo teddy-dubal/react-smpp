@@ -154,10 +154,39 @@ class Sms extends SubmitSm
     }
 
     private function parse(){
-        $message = $this->getShortMessage();
+        if (count($parts = $this->getParts()) > 1){
+            $csmsReference      = $this->getCsmsReference();
+            $sarMsgRefNum       = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
+            $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
+            $seqnum             = 1;
+            foreach ($parts as $part) {
+                $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
+                $c = $this->connection;
+                $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
+                    ->setShortMessage($part)
+                    ->setSequenceNumber($c->getNextSequenceNumber());
+                $pduStr = $this->__toString();                    
+                $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
+                    $c->write($pduStr);
+                });
+                $seqnum++;
+            }
+            return true;
+        }
+        return $this->submitSm();
+    }
+
+    public function submitSm(){
+        $this->connection->write($this->__toString());
+    }
+
+    public function getParts()
+    {
+        $message    = $this->getShortMessage();
         $dataCoding = $this->getDataCoding();
-        $msgLength = strlen($message);
-        
+        $msgLength  = strlen($message);
+        $parts      = [$message];
+
         if ($msgLength > 160 && $dataCoding != DataCoding::UCS2 && $dataCoding != DataCoding::DEFAULT) {
             return false;
         }
@@ -174,56 +203,10 @@ class Sms extends SubmitSm
                 $singleSmsOctetLimit = 254; // From SMPP standard
                 break;
         }
-        $doCsms = false;
         if ($msgLength > $singleSmsOctetLimit) {
-            if ($this->csmsType != self::CSMS_PAYLOAD) {
-                $doCsms        = true;
-                $parts         = $this->splitMessageString($message, $csmsSplit, $dataCoding);
-                $short_message = reset($parts);
-                $csmsReference = $this->getCsmsReference();
-            }
-        } else {
-            $short_message = $message;
-            $doCsms        = false;
+            $parts         = $this->splitMessageString($message, $csmsSplit, $dataCoding);
         }
-    // Deal with CSMS
-        if ($doCsms) {
-            if ($this->csmsType == self::CSMS_PAYLOAD) {
-                $payload = new TLV(TLV::MESSAGE_PAYLOAD, $message, $msgLength);
-                // return submitSm($from, $to, null, (empty($tags) ? array($payload) : array_merge($tags, $payload)), $dataCoding, $priority, $scheduleDeliveryTime, $validityPeriod);
-                return '';
-            } else if ($this->csmsType == self::CSMS_8BIT_UDH) {
-                $seqnum = 1;
-                foreach ($parts as $part) {
-                    $udh = pack('cccccc', 5, 0, 3, substr($csmsReference, 1, 1), count($parts), $seqnum);
-                    // $res = submitSm($from, $to, $udh . $part, $tags, $dataCoding, $priority, $scheduleDeliveryTime, $validityPeriod, (SmppClient::$sms_esm_class | 0x40));
-                    $seqnum++;
-                }
-                return $res;
-            } else {
-                $csmsReference = 55878;
-                $sarMsgRefNum    = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
-                $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
-                $seqnum             = 1;
-                foreach ($parts as $part) {
-                    $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
-                    $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
-                    ->setShortMessage($part);
-                    $pduStr = $this->__toString();
-                    $c = $this->connection;
-                    $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
-                        $c->write($pduStr);
-                    });
-                    $seqnum++;
-                }
-                return true;
-            }
-        }
-        return $this->submitSm();
-    }
-
-    public function submitSm(){
-        $this->connection->write($this->__toString());
+        return $parts;
     }
 
     public function send()

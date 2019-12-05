@@ -27,8 +27,10 @@ $connector = new React\Socket\Connector($loop, ['timeout' => 5]);
 $logger    = new Logger('react-smpp-client', [new StreamHandler('php://stderr')]);
 
 $uri               = '127.0.0.1:2775';
+$uri = '94.198.176.242:7662';
 
 $credentials = ['id'=>'test','password'=>'test'];
+$credentials = ['id' => 'sun', 'password' => '$unD1g'];
 
 $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con) use ($logger,$loop,$credentials) {
     $session = ['id' => \uniqid(), 'auth' => false, 'id_smsc' => null, 'system_id' => null, 'password'];
@@ -58,7 +60,7 @@ $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con)
             }
             if (CommandStatus::ESME_ROK == $pdu->getCommandStatus()) {
                 $message = 'H€llo world é à ù ' . time();
-                // $message = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
+                $message = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer venenatis vehicula odio, non pharetra ex varius facilisis. Donec consectetur, velit non nullam.deux sms';
                 $msg = (new Gsm0338())->encode($message);
                 try {
                     $sms = new Sms();
