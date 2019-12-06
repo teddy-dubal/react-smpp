@@ -156,22 +156,29 @@ class Sms extends SubmitSm
     private function parse(){
         if (count($parts = $this->getParts()) > 1){
             $csmsReference      = $this->getCsmsReference();
-            $sarMsgRefNum       = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
-            $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
-            $seqnum             = 1;
-            foreach ($parts as $part) {
-                $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
-                $c = $this->connection;
-                $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
-                    ->setShortMessage($part)
-                    ->setSequenceNumber($c->getNextSequenceNumber());
-                $pduStr = $this->__toString();                    
-                $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
-                    $c->write($pduStr);
-                });
-                $seqnum++;
-            }
-            return true;
+            $seqnum = 1;
+				foreach ($parts as $part) {
+					$udh = pack('cccccc',5,0,3,substr($csmsReference,1,1),count($parts),$seqnum);
+					$res = $this->submit_sm($from, $to, $udh.$part, $tags, $dataCoding, $priority, $scheduleDeliveryTime, $validityPeriod, (SmppClient::$sms_esm_class|0x40));
+					$seqnum++;
+				}
+				return $res;
+            // $sarMsgRefNum       = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
+            // $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
+            // $seqnum             = 1;
+            // foreach ($parts as $part) {
+            //     $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
+            //     $c = $this->connection;
+            //     $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
+            //         ->setShortMessage($part)
+            //         ->setSequenceNumber($c->getNextSequenceNumber());
+            //     $pduStr = $this->__toString();                    
+            //     $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
+            //         $c->write($pduStr);
+            //     });
+            //     $seqnum++;
+            // }
+            // return true;
         }
         return $this->submitSm();
     }
