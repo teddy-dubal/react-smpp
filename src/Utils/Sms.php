@@ -1,7 +1,6 @@
 <?php
 namespace alexeevdv\React\Smpp\Utils;
 
-use alexeevdv\React\Smpp\Pdu\TLV;
 use alexeevdv\React\Smpp\Pdu\SubmitSm;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
 use React\Socket\ConnectionInterface;
@@ -10,41 +9,41 @@ class Sms extends SubmitSm
 {
 
     /**
-	 * Use sarMsgRefNum and sar_total_segments with 16 bit tags
-	 * @var int
-	 */
-	const CSMS_16BIT_TAGS = 0;
-	
-	/**
-	 * Use message payload for CSMS
-	 * @var int
-	 */
-	const CSMS_PAYLOAD = 1;
-	
-	/**
-	 * Embed a UDH in the message with 8-bit reference.
-	 * @var int
-	 */
+     * Use sarMsgRefNum and sar_total_segments with 16 bit tags
+     * @var int
+     */
+    const CSMS_16BIT_TAGS = 0;
+
+    /**
+     * Use message payload for CSMS
+     * @var int
+     */
+    const CSMS_PAYLOAD = 1;
+
+    /**
+     * Embed a UDH in the message with 8-bit reference.
+     * @var int
+     */
     const CSMS_8BIT_UDH = 2;
     /**
-     * 
+     *
      *
      * @var int
      */
     private $csmsType = Sms::CSMS_16BIT_TAGS;
     /**
-     * 
+     *
      *
      * @var int
      */
     private $sarMsgRefNum;
     /**
-     * 
+     *
      *
      */
     private $loop;
     /**
-     * 
+     *
      *
      * @var ConnectionInterface
      */
@@ -54,7 +53,7 @@ class Sms extends SubmitSm
     {
         parent::__construct($body);
     }
-    
+
     public function setCSmsType(int $type)
     {
         $this->csmsType = $type;
@@ -88,7 +87,7 @@ class Sms extends SubmitSm
     }
 
     /**
-     * 
+     *
      *
      * @param String $message
      * @param [type] $split
@@ -153,37 +152,30 @@ class Sms extends SubmitSm
         return $this->sarMsgRefNum;
     }
 
-    private function parse(){
-        if (count($parts = $this->getParts()) > 1){
-            $csmsReference      = $this->getCsmsReference();
-            $seqnum = 1;
-				foreach ($parts as $part) {
-					$udh = pack('cccccc',5,0,3,substr($csmsReference,1,1),count($parts),$seqnum);
-					$res = $this->submit_sm($from, $to, $udh.$part, $tags, $dataCoding, $priority, $scheduleDeliveryTime, $validityPeriod, (SmppClient::$sms_esm_class|0x40));
-					$seqnum++;
-				}
-				return $res;
-            // $sarMsgRefNum       = new TLV(TLV::SAR_MSG_REF_NUM, $csmsReference);
-            // $sar_total_segments = new TLV(TLV::SAR_TOTAL_SEGMENTS, count($parts));
-            // $seqnum             = 1;
-            // foreach ($parts as $part) {
-            //     $sartags = array($sarMsgRefNum, $sar_total_segments, new TLV(TLV::SAR_SEGMENT_SEQNUM, $seqnum));
-            //     $c = $this->connection;
-            //     $this->setTLV((empty($tags) ? $sartags : array_merge($tags, $sartags)))
-            //         ->setShortMessage($part)
-            //         ->setSequenceNumber($c->getNextSequenceNumber());
-            //     $pduStr = $this->__toString();                    
-            //     $this->loop->addTimer(0.1*$seqnum, function () use($pduStr,$c) {
-            //         $c->write($pduStr);
-            //     });
-            //     $seqnum++;
-            // }
-            // return true;
+    private function parse()
+    {
+        if (count($parts = $this->getParts()) > 1) {
+            $csmsReference = $this->getCsmsReference();
+            $c             = $this->connection;
+            $seqnum        = 1;
+            foreach ($parts as $part) {
+                $udh = pack('cccccc', 5, 0, 3, substr($csmsReference, 1, 1), count($parts), $seqnum);
+                $this->setShortMessage($udh . $part)
+                    ->setEsmClass(64)
+                    ->setSequenceNumber($c->getNextSequenceNumber());
+                $pduStr = $this->__toString();
+                $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c) {
+                    $c->write($pduStr);
+                });
+                $seqnum++;
+            }
+            return true;
         }
         return $this->submitSm();
     }
 
-    public function submitSm(){
+    public function submitSm()
+    {
         $this->connection->write($this->__toString());
     }
 
@@ -211,18 +203,18 @@ class Sms extends SubmitSm
                 break;
         }
         if ($msgLength > $singleSmsOctetLimit) {
-            $parts         = $this->splitMessageString($message, $csmsSplit, $dataCoding);
+            $parts = $this->splitMessageString($message, $csmsSplit, $dataCoding);
         }
         return $parts;
     }
 
     public function send()
     {
-        
-        if (!$this->connection){
+
+        if (!$this->connection) {
             throw new Exception("Connection required", 1);
         }
         return $this->parse();
     }
-   
+
 }
