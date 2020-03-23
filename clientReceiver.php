@@ -32,10 +32,10 @@ $connector = new React\Socket\Connector($loop, ['timeout' => 5]);
 $logger    = new Logger('react-smpp-client', [new StreamHandler('php://stderr')]);
 
 $uri               = '127.0.0.1:2775';
-$uri = '94.198.176.242:7662';
+$uri = ':';
 
 $credentials = ['id'=>'test','password'=>'test'];
-$credentials = ['id' => 'sun', 'password' => '$unD1g'];
+$credentials = ['id' => '', 'password' => ''];
 
 $connector->connect($uri)->then(function (React\Socket\ConnectionInterface $con) use ($logger,$loop,$credentials) {
     $session = ['id' => \uniqid(), 'auth' => false];

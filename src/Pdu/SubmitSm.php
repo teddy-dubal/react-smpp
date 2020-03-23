@@ -206,7 +206,7 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
         return $this->destinationAddress;
     }
 
-    public function setDestinationAddress(AddressContract $address): self
+    public function setDestinationAddress(AddressContract $address = null): self
     {
         $this->destinationAddress = $address;
         return $this;
