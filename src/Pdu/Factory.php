@@ -32,6 +32,48 @@ class Factory implements Contract\Factory
         0x80000015 => EnquireLinkResp::class,
     ];
 
+    public function readBytes($buffer, $length, $postion = 0)
+    {
+        $data         = '';
+        $initPosition = $postion;
+        while (strlen($data) < $length) {
+            $data .= $buffer[$initPosition];
+            $initPosition++;
+        }
+        return ['d' => $data, 'p' => $initPosition];
+    }
+
+    public function createFromStreamBuffer(string $buffer): array
+    {
+        $wrapper = new DataWrapper($buffer);
+        if ($wrapper->bytesLeft() < 16) {
+            throw new MalformedPdu(bin2hex($buffer));
+        }
+
+        $pdu_queue = [];
+        $length    = $wrapper->readInt32();
+        if (strlen($buffer) !== $length && strlen($buffer) > $length) {
+            $position = 0;
+            do {
+                $v = $this->readBytes($buffer, $length, $position);
+                try {
+                    $pdu_queue[] = $this->createFromBuffer($v['d']);
+                } catch (\Throwable $th) {
+                    //throw $th;
+                }
+                $position = $v['p'];
+                $length   = 0;
+                if ($v['p'] < strlen($buffer)) {
+                    $w      = new DataWrapper(substr($buffer, $position));
+                    $length = $w->readInt32();
+                }
+            } while ($length > 0);
+        } else {
+            $pdu_queue[] = $this->createFromBuffer($buffer);
+        }
+        return $pdu_queue;
+    }
+    
     public function createFromBuffer(string $buffer): Contract\Pdu
     {
         $wrapper = new DataWrapper($buffer);

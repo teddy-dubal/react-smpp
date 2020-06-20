@@ -50,8 +50,10 @@ final class Server extends EventEmitter implements ServerInterface
             $connection->on('data', function ($data) use ($connection) {
                 $pduFactory = new Factory;
                 try {
-                    $pdu = $pduFactory->createFromBuffer($data);
-                    $connection->emit('pdu', [$pdu]);
+                    $pdus = $pduFactory->createFromStreamBuffer($data);
+                    foreach ($pdus as $pdu) {
+                        $connection->emit('pdu', [$pdu]);
+                    }
                 } catch (\Exception $e) {
                     // TODO GENERIC_NACK
                     $connection->emit('error', [$e]);
