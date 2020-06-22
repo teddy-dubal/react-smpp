@@ -48,52 +48,7 @@ class TLV implements Contract\TLV
     const ALERT_ON_MESSAGE_DELIVERY   = 0x130C;
     const ITS_REPLY_TYPE              = 0x1380;
     const ITS_SESSION_INFO            = 0x1383;
-    private $sizeMap                  = [
-        self::DEST_ADDR_SUBUNIT           => ['value' => 1],
-        self::SOURCE_ADDR_SUBUNIT         => ['value' => 1],
-        self::DEST_NETWORK_TYPE           => ['value' => 1],
-        self::SOURCE_NETWORK_TYPE         => ['value' => 1],
-        self::DEST_BEARER_TYPE            => ['value' => 1],
-        self::SOURCE_BEARER_TYPE          => ['value' => 1],
-        self::DEST_TELEMATICS_ID          => ['value' => 2],
-        self::SOURCE_TELEMATICS_ID        => ['value' => 1],
-        self::QOS_TIME_TO_LIVE            => ['value' => 4],
-        self::PAYLOAD_TYPE                => ['value' => 1],
-        self::ADDITIONAL_STATUS_INFO_TEXT => ['value' => null],
-        self::RECEIPTED_MESSAGE_ID        => ['value' => null],
-        self::MS_MSG_WAIT_FACILITIES      => ['value' => 1],
-        self::PRIVACY_INDICATOR           => ['value' => 1],
-        self::SOURCE_SUBADDRESS           => ['value' => null],
-        self::DEST_SUBADDRESS             => ['value' => null],
-        self::USER_MESSAGE_REFERENCE      => ['value' => 2],
-        self::USER_RESPONSE_CODE          => ['value' => 1],
-        self::LANGUAGE_INDICATOR          => ['value' => 1],
-        self::SOURCE_PORT                 => ['value' => 2],
-        self::DESTINATION_PORT            => ['value' => 2],
-        self::SAR_MSG_REF_NUM             => ['value' => 2],
-        self::SAR_TOTAL_SEGMENTS          => ['value' => 1],
-        self::SAR_SEGMENT_SEQNUM          => ['value' => 1],
-        self::SC_INTERFACE_VERSION        => ['value' => 1],
-        self::DISPLAY_TIME                => ['value' => 1],
-        self::MS_VALIDITY                 => ['value' => 1],
-        self::DPF_RESULT                  => ['value' => 1],
-        self::SET_DPF                     => ['value' => 1],
-        self::MS_AVAILABILITY_STATUS      => ['value' => 1],
-        self::NETWORK_ERROR_CODE          => ['value' => 3, 'type' => 'string'],
-        self::MESSAGE_PAYLOAD             => ['value' => '*', 'type' => 'string'],
-        self::DELIVERY_FAILURE_REASON     => ['value' => 1],
-        self::MORE_MESSAGES_TO_SEND       => ['value' => 1],
-        self::MESSAGE_STATE               => ['value' => 1],
-        self::CALLBACK_NUM                => ['value' => '*', 'type' => 'string'],
-        self::CALLBACK_NUM_PRES_IND       => ['value' => 1],
-        self::CALLBACK_NUM_ATAG           => ['value' => '*', 'type' => 'string'],
-        self::NUMBER_OF_MESSAGES          => ['value' => 1],
-        self::SMS_SIGNAL                  => ['value' => 2],
-        self::ALERT_ON_MESSAGE_DELIVERY   => ['value' => 0],
-        self::ITS_REPLY_TYPE              => ['value' => 1],
-        self::USSD_SERVICE_OP             => ['value' => 1, 'type' => 'string'],
-        self::ITS_SESSION_INFO            => ['value' => 2],
-    ];
+
     /**
      * @var int
      */
@@ -103,10 +58,6 @@ class TLV implements Contract\TLV
      * @var string
      */
     private $value;
-    /**
-     * @var int
-     */
-    private $length;
 
     public function __construct(int $tag, string $value)
     {
@@ -126,10 +77,6 @@ class TLV implements Contract\TLV
 
     public function getLength(): int
     {
-        return $this->sizeMap[$this->tag]['value'];
-    }
-    public function getMap(): int
-    {
-        return $this->sizeMap[$this->tag];
+        return strlen($this->value);
     }
 }

@@ -90,14 +90,14 @@ class DataWrapper
     {
         if ($this->bytesLeft() < 4) {
             // TODO throw exception?
-            throw new Exception("No TLV", 1);
+            throw new \Exception("No TLV", 1);
         }
-
+        $this->position--;
         $tag    = $this->readInt16();
         $length = $this->readInt16();
         if ($this->bytesLeft() < $length) {
             // TODO throw exception?
-            throw new Exception("No TLV", 1);
+            throw new \Exception("No TLV", 1);
         }
         $value = $this->readBytes($length);
         return new TLV($tag, $value);
@@ -142,13 +142,8 @@ class DataWrapper
 
     public function writeTLV(?TLV $tlv): self
     {
-        $this->writeInt16($tlv->getTag())
-            ->writeInt16($tlv->getLength());
-        if ($tlv->getLength() == 2) {
-            $this->writeInt16($tlv->getValue());
-        } else {
-            $this->writeInt8($tlv->getValue());
-        }
-        return $this;
+        return $this->writeInt16($tlv->getTag())
+            ->writeInt16($tlv->getLength())
+            ->writeBytes($tlv->getValue());
     }
 }

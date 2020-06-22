@@ -1,9 +1,10 @@
 <?php
 namespace alexeevdv\React\Smpp\Utils;
 
+use Exception;
+use React\Socket\ConnectionInterface;
 use alexeevdv\React\Smpp\Pdu\SubmitSm;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
-use React\Socket\ConnectionInterface;
 
 class Sms extends SubmitSm
 {
