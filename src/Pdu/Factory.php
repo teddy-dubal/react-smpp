@@ -37,6 +37,9 @@ class Factory implements Contract\Factory
         $data         = '';
         $initPosition = $postion;
         while (strlen($data) < $length) {
+            if (!isset($buffer[$initPosition])) {
+                break;
+            }
             $data .= $buffer[$initPosition];
             $initPosition++;
         }
@@ -73,7 +76,7 @@ class Factory implements Contract\Factory
         }
         return $pdu_queue;
     }
-    
+
     public function createFromBuffer(string $buffer): Contract\Pdu
     {
         $wrapper = new DataWrapper($buffer);
@@ -86,8 +89,8 @@ class Factory implements Contract\Factory
             throw new MalformedPdu(bin2hex($buffer));
         }
 
-        $id = $wrapper->readInt32();
-        $status = $wrapper->readInt32();
+        $id       = $wrapper->readInt32();
+        $status   = $wrapper->readInt32();
         $sequence = $wrapper->readInt32();
 
         if (!isset($this->classMap[$id])) {
