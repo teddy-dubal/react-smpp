@@ -1,10 +1,10 @@
 <?php
 namespace alexeevdv\React\Smpp\Utils;
 
-use Exception;
-use React\Socket\ConnectionInterface;
 use alexeevdv\React\Smpp\Pdu\SubmitSm;
 use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
+use Exception;
+use React\Socket\ConnectionInterface;
 
 class Sms extends SubmitSm
 {
@@ -95,10 +95,10 @@ class Sms extends SubmitSm
      * @param [type] $dataCoding
      * @return String
      */
-    public function splitMessageString($message, $split, $dataCoding = DataCoding::DEFAULT)
+    public function splitMessageString($message, $split, $dataCoding = DataCoding::DEFAULT_0)
     {
         switch ($dataCoding) {
-            case DataCoding::DEFAULT:
+            case DataCoding::DEFAULT_0:
                 $msgLength = strlen($message);
                 // Do we need to do php based split?
                 $numParts = floor($msgLength / $split);
@@ -187,7 +187,7 @@ class Sms extends SubmitSm
         $msgLength  = strlen($message);
         $parts      = [$message];
 
-        if ($msgLength > 160 && $dataCoding != DataCoding::UCS2 && $dataCoding != DataCoding::DEFAULT) {
+        if ($msgLength > 160 && $dataCoding != DataCoding::UCS2 && $dataCoding != DataCoding::DEFAULT_0) {
             return false;
         }
         switch ($dataCoding) {
@@ -195,7 +195,8 @@ class Sms extends SubmitSm
                 $singleSmsOctetLimit = 140; // in octets, 70 UCS-2 chars
                 $csmsSplit           = 132; // There are 133 octets available, but this would split the UCS the middle so use 132 instead
                 break;
-            case DataCoding::DEFAULT: /*$dataCoding = DataCoding::DEFAULT*/
+            case DataCoding::DEFAULT_0:
+                $msgLength           = $this->gsm0338Length($message);
                 $singleSmsOctetLimit = 160; // we send data in octets, but GSM 03.38 will be packed in septets (7-bit) by SMSC.
                 $csmsSplit           = 152; // send 152 chars in each SMS since, we will use 16-bit CSMS ids (SMSC will format data)
                 break;
@@ -207,6 +208,13 @@ class Sms extends SubmitSm
             $parts = $this->splitMessageString($message, $csmsSplit, $dataCoding);
         }
         return $parts;
+    }
+
+    public function gsm0338Length($utf8String)
+    {
+        $len = mb_strlen($utf8String, 'utf-8');
+        $len += preg_match_all('/[\\^{}\\\~€|\\[\\]]/mu', $utf8String, $m);
+        return $len;
     }
 
     public function send()

@@ -2,12 +2,12 @@
 
 namespace alexeevdv\React\Smpp\Pdu;
 
-use DateTimeInterface;
 use alexeevdv\React\Smpp\Pdu\TLV;
+use alexeevdv\React\Smpp\Proto\Contract\Address as AddressContract;
+use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
 use alexeevdv\React\Smpp\Proto\DateTime;
 use alexeevdv\React\Smpp\Utils\DataWrapper;
-use alexeevdv\React\Smpp\Proto\Contract\DataCoding;
-use alexeevdv\React\Smpp\Proto\Contract\Address as AddressContract;
+use DateTimeInterface;
 
 class SubmitSm extends Pdu implements Contract\SubmitSm
 {
@@ -29,7 +29,7 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
     /**
      * @var int
      */
-    private $dataCoding = DataCoding::DEFAULT;
+    private $dataCoding = DataCoding::DEFAULT_0;
 
     /**
      * @var string
@@ -137,40 +137,40 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
             }
         } catch (\Throwable $th) {
         }
-        
+
         /* Body layout
-        optional
+    optional
 
-        user_message_reference TLV
-        source_port TLV
-        source_addr_subunit TLV
-        destination_port TLV
-        dest_addr_subunit TLV
-        sar_msg_ref_num TLV
-        sar_total_segments TLV
-        sar_segment_seqnum TLV
-        more_messages_to_send TLV
-        payload_type TLV
-        message_payload TLV
-        privacy_indicator TLV
-        callback_num TLV
-        callback_num_pres_ind TLV
-        callback_num_atag TLV
-        source_subaddress TLV
-        dest_subaddress TLV
-        user_response_code TLV
-        display_time TLV
-        sms_signal TLV
-        ms_validity TLV
-        ms_msg_wait_facilities TLV
-        number_of_messages TLV
-        alert_on_msg_delivery TLV
-        language_indicator TLV
-        its_reply_type TLV
-        its_session_info TLV
-        ussd_service_op TLV
+    user_message_reference TLV
+    source_port TLV
+    source_addr_subunit TLV
+    destination_port TLV
+    dest_addr_subunit TLV
+    sar_msg_ref_num TLV
+    sar_total_segments TLV
+    sar_segment_seqnum TLV
+    more_messages_to_send TLV
+    payload_type TLV
+    message_payload TLV
+    privacy_indicator TLV
+    callback_num TLV
+    callback_num_pres_ind TLV
+    callback_num_atag TLV
+    source_subaddress TLV
+    dest_subaddress TLV
+    user_response_code TLV
+    display_time TLV
+    sms_signal TLV
+    ms_validity TLV
+    ms_msg_wait_facilities TLV
+    number_of_messages TLV
+    alert_on_msg_delivery TLV
+    language_indicator TLV
+    its_reply_type TLV
+    its_session_info TLV
+    ussd_service_op TLV
 
-        */
+     */
 
     }
 
@@ -334,7 +334,7 @@ class SubmitSm extends Pdu implements Contract\SubmitSm
         return $this;
     }
 
-    public function getTLV():array
+    public function getTLV(): array
     {
         return $this->tlv;
     }
