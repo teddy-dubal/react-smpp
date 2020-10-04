@@ -155,9 +155,9 @@ class Sms extends SubmitSm
 
     private function parse()
     {
+        $c = $this->connection;
         if (count($parts = $this->getParts()) > 1) {
             $csmsReference = $this->getCsmsReference();
-            $c             = $this->connection;
             $seqnum        = 1;
             foreach ($parts as $part) {
                 $udh = pack('cccccc', 5, 0, 3, substr($csmsReference, 1, 1), count($parts), $seqnum);
@@ -172,7 +172,7 @@ class Sms extends SubmitSm
             }
             return true;
         }
-        return $this->submitSm();
+        return $this->setSequenceNumber($c->getNextSequenceNumber())->submitSm();
     }
 
     public function submitSm()
