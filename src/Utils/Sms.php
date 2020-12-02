@@ -177,7 +177,7 @@ class Sms extends SubmitSm
 
     public function submitSm()
     {
-        $this->connection->write($this->__toString());
+        return $this->connection->write($this->__toString());
     }
 
     public function getParts()
