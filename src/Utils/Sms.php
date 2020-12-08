@@ -46,6 +46,11 @@ class Sms extends SubmitSm
     /**
      *
      *
+     */
+    private $callback;
+    /**
+     *
+     *
      * @var ConnectionInterface
      */
     private $connection;
@@ -69,6 +74,12 @@ class Sms extends SubmitSm
     public function setConnection(ConnectionInterface $connection)
     {
         $this->connection = $connection;
+        return $this;
+    }
+
+    public function setCallback($callback)
+    {
+        $this->callback = $callback;
         return $this;
     }
 
@@ -165,14 +176,19 @@ class Sms extends SubmitSm
                     ->setEsmClass(64)
                     ->setSequenceNumber($c->getNextSequenceNumber());
                 $pduStr = $this->__toString();
-                $this->loop->addTimer(0.2 * $seqnum, function () use ($pduStr, $c) {
-                    $c->write($pduStr);
+                $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c) {
+                    if ($c->write($pduStr)){
+                        $this->callback();
+                    }
                 });
                 $seqnum++;
             }
             return true;
         }
-        return $this->setSequenceNumber($c->getNextSequenceNumber())->submitSm();
+        if ($this->setSequenceNumber($c->getNextSequenceNumber())->submitSm()){
+            $this->callback();
+        } 
+        return false;
     }
 
     public function submitSm()
