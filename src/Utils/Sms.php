@@ -166,7 +166,8 @@ class Sms extends SubmitSm
 
     private function parse()
     {
-        $c = $this->connection;
+        $c     = $this->connection;
+        $callb = $this->callback;
         if (count($parts = $this->getParts()) > 1) {
             $csmsReference = $this->getCsmsReference();
             $seqnum        = 1;
@@ -176,18 +177,19 @@ class Sms extends SubmitSm
                     ->setEsmClass(64)
                     ->setSequenceNumber($c->getNextSequenceNumber());
                 $pduStr = $this->__toString();
-                $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c) {
-                    if ($c->write($pduStr)){
-                        $this->callback();
+                $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c, $callb) {
+                    if ($c->write($pduStr)) {
+                        $callb();
                     }
                 });
                 $seqnum++;
             }
             return true;
         }
-        if ($this->setSequenceNumber($c->getNextSequenceNumber())->submitSm()){
-            $this->callback();
-        } 
+        if ($this->setSequenceNumber($c->getNextSequenceNumber())->submitSm()) {
+            $callb();
+            return true;
+        }
         return false;
     }
 
