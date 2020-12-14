@@ -179,7 +179,7 @@ class Sms extends SubmitSm
                 $pduStr = $this->__toString();
                 $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c, $callb) {
                     if ($c->write($pduStr)) {
-                        $callb();
+                        $callb($this);
                     }
                 });
                 $seqnum++;
@@ -187,7 +187,7 @@ class Sms extends SubmitSm
             return true;
         }
         if ($this->setSequenceNumber($c->getNextSequenceNumber())->submitSm()) {
-            $callb();
+            $callb($this);
             return true;
         }
         return false;
