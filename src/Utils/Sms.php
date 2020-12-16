@@ -87,16 +87,6 @@ class Sms extends SubmitSm
     {
         return $this->connection;
     }
-    public function setLoop($loop)
-    {
-        $this->loop = $loop;
-        return $this;
-    }
-
-    public function getLoop()
-    {
-        return $this->loop;
-    }
 
     /**
      *
