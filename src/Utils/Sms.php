@@ -177,12 +177,11 @@ class Sms extends SubmitSm
                     ->setEsmClass(64)
                     ->setSequenceNumber($c->getNextSequenceNumber());
                 $pduStr = $this->__toString();
-                $this->loop->addTimer(0.1 * $seqnum, function () use ($pduStr, $c, $callb) {
-                    if ($c->write($pduStr)) {
-                        $callb($this);
-                    }
-                });
+                if ($c->write($pduStr)) {
+                    $callb($this);
+                }
                 $seqnum++;
+                \sleep(0.1);
             }
             return true;
         }
